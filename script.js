@@ -486,7 +486,7 @@ document.addEventListener('keydown', e => {
 
 // ─── SPEECH RECOGNITION ───────────────────────────────────────────────────────
 
-function createRecognition(lang, onResult, onDone) {
+function createRecognition(lang, onResult, onDone, onNoSpeech = () => {}) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     alert(state.lang === 'zh' ? '你的瀏覽器不支援語音輸入，請用 Chrome 瀏覽器！' : 'Your browser does not support voice input. Please use Chrome!');
@@ -503,7 +503,9 @@ function createRecognition(lang, onResult, onDone) {
   r.onerror = evt => {
     if (evt.error === 'not-allowed') {
       alert(state.lang === 'zh' ? '請允許麥克風權限，才能使用語音輸入！' : 'Please allow microphone access to use voice input.');
-    } else if (evt.error !== 'no-speech' && evt.error !== 'aborted') {
+    } else if (evt.error === 'no-speech') {
+      onNoSpeech();
+    } else if (evt.error !== 'aborted') {
       alert(state.lang === 'zh' ? `語音錯誤：${evt.error}` : `Speech error: ${evt.error}`);
     }
     onDone();
@@ -526,10 +528,18 @@ function toggleRecording() {
     state.recognition = null;
     btn.classList.remove('recording');
   };
+  const chatInput = document.getElementById('chat-text-input');
+  const origPlaceholder = chatInput.placeholder;
   state.recognition = createRecognition(
     state.lang === 'zh' ? 'zh-TW' : 'en-US',
-    text => { const input = document.getElementById('chat-text-input'); input.value = text; sendMessage(text); input.value = ''; },
-    done
+    text => {
+      if (text.trim()) chatInput.value = text;
+    },
+    done,
+    () => {
+      chatInput.placeholder = state.lang === 'zh' ? '沒有聽到，請再說一次…' : 'Nothing heard, please try again…';
+      setTimeout(() => { chatInput.placeholder = origPlaceholder; }, 2500);
+    }
   );
   if (state.recognition) {
     try {
@@ -557,10 +567,16 @@ function toggleQuizRecording() {
     state.recognition = null;
     btn.classList.remove('recording');
   };
+  const quizTA = document.getElementById('quiz-text-answer');
   state.recognition = createRecognition(
     state.lang === 'zh' ? 'zh-TW' : 'en-US',
-    text => { document.getElementById('quiz-text-answer').value = text; },
-    done
+    text => { if (text.trim()) quizTA.value = text; },
+    done,
+    () => {
+      const orig = quizTA.placeholder;
+      quizTA.placeholder = state.lang === 'zh' ? '沒有聽到，請再說一次…' : 'Nothing heard, please try again…';
+      setTimeout(() => { quizTA.placeholder = orig; }, 2500);
+    }
   );
   if (state.recognition) {
     try {
