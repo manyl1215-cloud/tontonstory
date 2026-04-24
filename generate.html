@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>圖片生成工具 | Image Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; padding: 2rem; }
+    h1 { text-align: center; font-size: 1.6rem; margin-bottom: 0.5rem; color: #FFD166; }
+    .subtitle { text-align: center; color: #aaa; margin-bottom: 2rem; font-size: 0.9rem; }
+    .key-row { display: flex; gap: 0.75rem; margin-bottom: 2rem; max-width: 700px; margin-inline: auto; }
+    .key-input { flex: 1; padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid #444; background: #16213e; color: #eee; font-size: 0.9rem; }
+    .btn { padding: 0.6rem 1.4rem; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: opacity 0.2s; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-blue { background: #4A90D9; color: white; }
+    .btn-green { background: #4CAF50; color: white; }
+    .btn-pink { background: #FF8FAB; color: white; }
+    .controls { text-align: center; margin-bottom: 2rem; }
+    .all-btn { font-size: 1.1rem; padding: 0.8rem 2.5rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; max-width: 1200px; margin-inline: auto; }
+    .card { background: #16213e; border-radius: 16px; overflow: hidden; border: 1px solid #2a2a4a; }
+    .card-header { padding: 0.75rem 1rem; background: #0f3460; display: flex; align-items: center; justify-content: space-between; }
+    .scene-label { font-weight: 700; font-size: 0.95rem; }
+    .card-img { width: 100%; aspect-ratio: 9/16; object-fit: cover; background: #0a0a1a; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .card-img img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .card-img-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; color: #555; }
+    .spinner { font-size: 2rem; animation: spin 1.5s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-text { font-size: 0.8rem; }
+    .card-footer { padding: 0.75rem 1rem; background: #0f0f1e; }
+    .prompt-text { font-size: 0.75rem; color: #777; line-height: 1.4; margin-bottom: 0.5rem; }
+    .save-link { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1rem; background: #4CAF50; color: white; border-radius: 20px; text-decoration: none; font-size: 0.85rem; font-weight: 700; display: none; }
+    .save-link:hover { background: #45a049; }
+    .log { max-width: 700px; margin: 2rem auto 0; background: #0a0a1a; border-radius: 12px; padding: 1rem; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto; }
+    .log-entry { padding: 0.2rem 0; border-bottom: 1px solid #1a1a2e; }
+    .log-ok { color: #4CAF50; }
+    .log-err { color: #f44336; }
+    .log-info { color: #FFD166; }
+    .instructions { max-width: 700px; margin: 2rem auto; background: #16213e; border-radius: 12px; padding: 1.25rem; border-left: 4px solid #FFD166; }
+    .instructions h3 { color: #FFD166; margin-bottom: 0.75rem; }
+    .instructions ol { padding-left: 1.25rem; line-height: 2; color: #ccc; font-size: 0.9rem; }
+    code { background: #0a0a1a; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.85rem; color: #4A90D9; }
+  </style>
+</head>
+<body>
+
+<h1>🎨 圖片生成工具</h1>
+<p class="subtitle">生成「彤彤的筆畫魔法書」場景插圖，存到 images/ 資料夾後就不需要每次重新生成</p>
+
+<div class="key-row">
+  <input class="key-input" id="api-key" type="password" placeholder="輸入 Gemini API Key…">
+  <button class="btn btn-blue" onclick="saveKey()">儲存 Key</button>
+</div>
+
+<div class="controls">
+  <button class="btn btn-pink all-btn" id="gen-all-btn" onclick="generateAll()">✨ 全部生成</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="instructions">
+  <h3>📁 使用說明</h3>
+  <ol>
+    <li>輸入 Gemini API Key 並儲存</li>
+    <li>點「全部生成」，等待所有場景圖片生成</li>
+    <li>每張圖片點「💾 另存新檔」，儲存到專案的 <code>images/</code> 資料夾</li>
+    <li>命名格式：<code>scene-1.png</code>、<code>scene-2.png</code>…依此類推</li>
+    <li>將圖片 commit 到 GitHub，網站就會直接讀取，不再等待 AI 生成</li>
+  </ol>
+</div>
+
+<div class="log" id="log"></div>
+
+<script src="story-data.js"></script>
+<script>
+  const IMAGEN_MODEL = 'imagen-3.0-generate-008';
+  const FLASH_MODEL = 'gemini-2.0-flash-preview-image-generation';
+
+  function log(msg, type = 'info') {
+    const el = document.getElementById('log');
+    const d = document.createElement('div');
+    d.className = `log-entry log-${type}`;
+    d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function saveKey() {
+    const k = document.getElementById('api-key').value.trim();
+    if (k) { localStorage.setItem('gemini_api_key', k); log('API Key 已儲存', 'ok'); }
+  }
+
+  function getKey() {
+    const fromInput = document.getElementById('api-key').value.trim();
+    const fromStorage = localStorage.getItem('gemini_api_key') || '';
+    return fromInput || fromStorage;
+  }
+
+  window.addEventListener('load', () => {
+    const saved = localStorage.getItem('gemini_api_key');
+    if (saved) document.getElementById('api-key').value = saved;
+    buildGrid();
+  });
+
+  function buildGrid() {
+    const grid = document.getElementById('grid');
+    STORY.scenes.forEach((scene, i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = `card-${i}`;
+      card.innerHTML = `
+        <div class="card-header">
+          <span class="scene-label">場景 ${i + 1}</span>
+          <button class="btn btn-blue" onclick="generateOne(${i})" id="btn-${i}">生成</button>
+        </div>
+        <div class="card-img" id="img-wrap-${i}">
+          <div class="card-img-placeholder" id="placeholder-${i}">
+            <span class="status-text">尚未生成</span>
+          </div>
+          <img id="img-${i}" src="" alt="Scene ${i+1}">
+        </div>
+        <div class="card-footer">
+          <div class="prompt-text">${scene.imagePrompt.slice(0, 120)}…</div>
+          <a class="save-link" id="save-${i}" download="scene-${i+1}.png">💾 另存新檔 scene-${i+1}.png</a>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  async function generateAll() {
+    const btn = document.getElementById('gen-all-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ 生成中…';
+    for (let i = 0; i < STORY.scenes.length; i++) {
+      await generateOne(i);
+    }
+    btn.disabled = false;
+    btn.textContent = '✨ 全部生成';
+    log('全部場景生成完畢！', 'ok');
+  }
+
+  async function generateOne(index) {
+    const key = getKey();
+    if (!key) { alert('請先輸入 Gemini API Key！'); return; }
+
+    const scene = STORY.scenes[index];
+    const ph = document.getElementById(`placeholder-${index}`);
+    const btn = document.getElementById(`btn-${index}`);
+    btn.disabled = true;
+    ph.innerHTML = '<span class="spinner">🌟</span><span class="status-text">Imagen 3 生成中…</span>';
+    log(`場景 ${index + 1}：開始生成…`, 'info');
+
+    let dataUrl = await tryImagen3(scene.imagePrompt, key, index);
+    if (!dataUrl) {
+      ph.querySelector('.status-text').textContent = '改用 Flash 模型…';
+      log(`場景 ${index + 1}：Imagen3 失敗，改用 Flash 模型`, 'info');
+      dataUrl = await tryFlash(scene.imagePrompt, key, index);
+    }
+
+    btn.disabled = false;
+
+    if (dataUrl) {
+      const img = document.getElementById(`img-${index}`);
+      img.src = dataUrl;
+      img.style.display = 'block';
+      ph.style.display = 'none';
+
+      const saveLink = document.getElementById(`save-${index}`);
+      saveLink.href = dataUrl;
+      saveLink.style.display = 'inline-flex';
+      log(`場景 ${index + 1}：✅ 生成成功`, 'ok');
+    } else {
+      ph.innerHTML = '<span style="color:#f44336;font-size:0.85rem">生成失敗，請查看 Console 錯誤</span>';
+      log(`場景 ${index + 1}：❌ 生成失敗`, 'err');
+    }
+  }
+
+  async function tryImagen3(prompt, key, index) {
+    try {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:predict?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instances: [{ prompt }],
+            parameters: { sampleCount: 1, aspectRatio: '9:16' }
+          })
+        }
+      );
+      const data = await resp.json();
+      console.log(`[Scene ${index+1} Imagen3]`, data);
+      const pred = data?.predictions?.[0];
+      if (pred?.bytesBase64Encoded) {
+        return `data:${pred.mimeType || 'image/png'};base64,${pred.bytesBase64Encoded}`;
+      }
+      if (data?.error) log(`Imagen3 錯誤：${data.error.message}`, 'err');
+      return null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
+
+  async function tryFlash(prompt, key, index) {
+    try {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${FLASH_MODEL}:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+          })
+        }
+      );
+      const data = await resp.json();
+      console.log(`[Scene ${index+1} Flash]`, data);
+      if (data?.error) log(`Flash 錯誤：${data.error.message}`, 'err');
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      for (const p of parts) {
+        if (p.inlineData) return `data:${p.inlineData.mimeType};base64,${p.inlineData.data}`;
+      }
+      return null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
+</script>
+</body>
+</html>

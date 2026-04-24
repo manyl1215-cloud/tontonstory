@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>彤彤的筆畫魔法書 | Tong Tong's Magic Stroke Book</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- SCREEN: Landing -->
+  <div id="screen-landing" class="screen active">
+    <div class="stars-bg"></div>
+    <div class="landing-content">
+      <div class="lang-toggle-top">
+        <button id="lang-btn-landing" class="lang-btn" onclick="toggleLang()">English</button>
+        <button class="key-btn" onclick="changeApiKey()" title="更換 API Key">⚙️</button>
+      </div>
+      <div class="book-cover">
+        <div class="cover-illustration">
+          <div class="magic-characters">
+            <span class="float-char" style="--d:0s">龜</span>
+            <span class="float-char" style="--d:0.5s">鳥</span>
+            <span class="float-char" style="--d:1s">雨</span>
+            <span class="float-char" style="--d:1.5s">花</span>
+            <span class="float-char" style="--d:2s">走</span>
+          </div>
+          <div class="cover-girl">🧒✨</div>
+        </div>
+        <h1 id="landing-title" class="book-title">彤彤的筆畫魔法書</h1>
+        <p id="landing-author" class="book-author">作者：滿昱繪</p>
+      </div>
+      <button id="start-btn" class="btn btn-primary btn-large" onclick="startStory()">
+        開始閱讀 ✨
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Story -->
+  <div id="screen-story" class="screen">
+    <div class="story-header">
+      <button class="icon-btn" onclick="goToLanding()" title="回首頁">🏠</button>
+      <div class="progress-bar-wrap">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+      <div id="scene-counter" class="scene-counter"></div>
+      <button id="lang-btn-story" class="lang-btn small" onclick="toggleLang()">English</button>
+    </div>
+
+    <div class="story-body">
+      <div class="story-image-wrap">
+        <div id="story-image-container" class="story-image-container">
+          <div id="image-placeholder" class="image-placeholder">
+            <div class="generating-text" id="gen-text">✨ 正在為你畫圖...</div>
+            <div class="magic-spinner">🌟</div>
+          </div>
+          <img id="story-image" class="story-image" src="" alt="" style="display:none">
+        </div>
+      </div>
+
+      <div class="story-text-wrap">
+        <div id="story-text" class="story-text"></div>
+        <div class="story-controls">
+          <button id="listen-btn" class="btn btn-listen" onclick="toggleTTS()">
+            🔊 <span id="listen-label">聽故事</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="story-nav">
+      <button id="prev-btn" class="btn btn-nav" onclick="prevScene()">← <span id="prev-label">上一頁</span></button>
+      <button id="next-btn" class="btn btn-nav btn-next" onclick="nextScene()"><span id="next-label">下一頁</span> →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Story End / Choose -->
+  <div id="screen-choose" class="screen">
+    <div class="choose-content">
+      <div class="end-celebration">🎉</div>
+      <h2 id="choose-title" class="section-title">故事讀完啦！</h2>
+      <p id="choose-sub" class="section-sub">你想做什麼呢？</p>
+      <div class="choose-buttons">
+        <button class="btn btn-primary" onclick="goChatScreen()">
+          <span id="talk-btn-label">與角色對話 💬</span>
+        </button>
+        <button class="btn btn-secondary" onclick="goQuizScreen()">
+          <span id="quiz-btn-label">直接去測驗 🌟</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Chat -->
+  <div id="screen-chat" class="screen">
+    <div class="chat-header">
+      <button class="icon-btn" onclick="showChooseScreen()">←</button>
+      <h2 id="chat-title" class="chat-title-text">和故事朋友說說話！</h2>
+      <button id="lang-btn-chat" class="lang-btn small" onclick="toggleLang()">English</button>
+    </div>
+
+    <div id="char-select" class="char-select">
+      <p id="choose-char-label" class="choose-char-label">選一個角色開始對話：</p>
+      <div class="char-cards">
+        <button class="char-card" id="card-tongtong" onclick="selectCharacter('tongtong')">
+          <div class="char-avatar">🧒</div>
+          <div class="char-name" id="name-tongtong">彤彤</div>
+          <div class="char-desc" id="desc-tongtong">7歲的小朋友</div>
+        </button>
+        <button class="char-card" id="card-teacher" onclick="selectCharacter('teacher')">
+          <div class="char-avatar">👩‍🏫</div>
+          <div class="char-name" id="name-teacher">美玲老師</div>
+          <div class="char-desc" id="desc-teacher">溫柔的老師</div>
+        </button>
+      </div>
+    </div>
+
+    <div id="chat-area" class="chat-area" style="display:none">
+      <div class="active-char-bar">
+        <span id="active-char-avatar"></span>
+        <span id="active-char-name"></span>
+        <button class="small-link" onclick="resetCharSelect()">換角色</button>
+      </div>
+      <div id="chat-messages" class="chat-messages"></div>
+      <div class="chat-input-area">
+        <input type="text" id="chat-text-input" class="chat-text-input" placeholder="打字或按住麥克風說話…">
+        <button id="send-text-btn" class="icon-btn send-btn" onclick="sendTextMessage()">➤</button>
+        <button id="mic-btn" class="mic-btn"
+          onmousedown="startRecording()" onmouseup="stopRecording()"
+          ontouchstart="startRecording(event)" ontouchend="stopRecording(event)">
+          🎤
+        </button>
+      </div>
+      <button class="btn btn-secondary btn-sm mt-1" onclick="goQuizScreen()">
+        <span id="go-quiz-label">去做測驗 →</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREEN: Quiz -->
+  <div id="screen-quiz" class="screen">
+    <div class="quiz-header">
+      <button class="icon-btn" onclick="showChooseScreen()">←</button>
+      <h2 id="quiz-title" class="quiz-title-text">🌟 小小測驗時間！</h2>
+      <button id="lang-btn-quiz" class="lang-btn small" onclick="toggleLang()">English</button>
+    </div>
+
+    <div id="quiz-intro" class="quiz-intro">
+      <div class="quiz-teacher-avatar">👩‍🏫</div>
+      <p id="quiz-intro-text">你準備好回答美玲老師的問題了嗎？</p>
+      <button class="btn btn-primary btn-large" onclick="beginQuiz()">
+        <span id="start-quiz-label">開始答題！</span>
+      </button>
+    </div>
+
+    <div id="quiz-question-area" class="quiz-question-area" style="display:none">
+      <div class="quiz-progress">
+        <span id="quiz-q-num">1</span> / <span id="quiz-q-total">5</span>
+      </div>
+      <div class="quiz-bubble">
+        <span class="quiz-char-avatar">👩‍🏫</span>
+        <div class="quiz-question-text" id="quiz-question-text"></div>
+      </div>
+      <div class="quiz-hint" id="quiz-hint" style="display:none">
+        💡 <span id="quiz-hint-text"></span>
+      </div>
+
+      <div id="quiz-answer-area" class="quiz-answer-area">
+        <textarea id="quiz-text-answer" class="quiz-textarea" rows="3" placeholder="在這裡輸入你的答案…"></textarea>
+        <div class="quiz-answer-controls">
+          <button id="quiz-mic-btn" class="mic-btn"
+            onmousedown="startQuizRecording()" onmouseup="stopQuizRecording()"
+            ontouchstart="startQuizRecording(event)" ontouchend="stopQuizRecording(event)">
+            🎤
+          </button>
+          <button class="btn btn-primary" onclick="submitQuizAnswer()">
+            <span id="submit-label">送出答案</span>
+          </button>
+          <button class="small-link" onclick="showQuizHint()">
+            <span id="hint-label">需要提示？</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="quiz-feedback" class="quiz-feedback" style="display:none">
+        <div class="feedback-bubble">
+          <span class="quiz-char-avatar">👩‍🏫</span>
+          <div id="feedback-text" class="feedback-text"></div>
+        </div>
+        <button class="btn btn-primary" onclick="nextQuizQuestion()">
+          <span id="next-q-label">下一題 →</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: End -->
+  <div id="screen-end" class="screen">
+    <div class="end-content">
+      <div class="end-fireworks">🎆🌟🎉🌟🎆</div>
+      <h2 id="end-title">太棒了！你真的很厲害！🌟</h2>
+      <p id="end-msg">你認真讀完了「彤彤的筆畫魔法書」！希望你也能像彤彤一樣，找到屬於自己的學習魔法！</p>
+      <div class="star-score" id="star-score"></div>
+      <button class="btn btn-primary btn-large" onclick="restartAll()">
+        <span id="read-again-label">再讀一次 📖</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="story-data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
