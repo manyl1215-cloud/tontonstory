@@ -95,7 +95,7 @@ function applyLang() {
   setTextById('gen-text', t(ui.generating));
 
   const chatInput = document.getElementById('chat-text-input');
-  if (chatInput) chatInput.placeholder = isZh ? '打字或按住麥克風說話…' : 'Type or hold the mic to speak…';
+  if (chatInput) chatInput.placeholder = isZh ? '打字或點麥克風說話…' : 'Type or tap the mic to speak…';
   const quizTA = document.getElementById('quiz-text-answer');
   if (quizTA) quizTA.placeholder = isZh ? '在這裡輸入你的答案…' : 'Type your answer here…';
 
@@ -486,7 +486,7 @@ document.addEventListener('keydown', e => {
 
 // ─── SPEECH RECOGNITION ───────────────────────────────────────────────────────
 
-function createRecognition(lang, onResult) {
+function createRecognition(lang, onResult, onDone) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     alert(state.lang === 'zh' ? '你的瀏覽器不支援語音輸入，請用 Chrome 瀏覽器！' : 'Your browser does not support voice input. Please use Chrome!');
@@ -500,59 +500,78 @@ function createRecognition(lang, onResult) {
     const transcript = e.results[0][0].transcript;
     onResult(transcript);
   };
-  r.onerror = () => {};
+  r.onerror = evt => {
+    if (evt.error === 'not-allowed') {
+      alert(state.lang === 'zh' ? '請允許麥克風權限，才能使用語音輸入！' : 'Please allow microphone access to use voice input.');
+    } else if (evt.error !== 'no-speech' && evt.error !== 'aborted') {
+      alert(state.lang === 'zh' ? `語音錯誤：${evt.error}` : `Speech error: ${evt.error}`);
+    }
+    onDone();
+  };
+  r.onend = onDone;
   return r;
 }
 
-function startRecording(e) {
-  if (e) e.preventDefault();
+function toggleRecording() {
+  if (state.isRecording) {
+    if (state.recognition) { state.recognition.stop(); state.recognition = null; }
+    state.isRecording = false;
+    document.getElementById('mic-btn').classList.remove('recording');
+    return;
+  }
   stopTTS();
-  const lang = state.lang === 'zh' ? 'zh-TW' : 'en-US';
-  state.recognition = createRecognition(lang, text => {
-    const input = document.getElementById('chat-text-input');
-    input.value = text;
-    sendMessage(text);
-    input.value = '';
-  });
-  if (state.recognition) {
-    state.recognition.start();
-    state.isRecording = true;
-    document.getElementById('mic-btn').classList.add('recording');
-  }
-}
-
-function stopRecording(e) {
-  if (e) e.preventDefault();
-  if (state.recognition) {
-    state.recognition.stop();
+  const btn = document.getElementById('mic-btn');
+  const done = () => {
+    state.isRecording = false;
     state.recognition = null;
+    btn.classList.remove('recording');
+  };
+  state.recognition = createRecognition(
+    state.lang === 'zh' ? 'zh-TW' : 'en-US',
+    text => { const input = document.getElementById('chat-text-input'); input.value = text; sendMessage(text); input.value = ''; },
+    done
+  );
+  if (state.recognition) {
+    try {
+      state.recognition.start();
+      state.isRecording = true;
+      btn.classList.add('recording');
+    } catch (err) {
+      state.recognition = null;
+      alert(state.lang === 'zh' ? '無法啟動語音輸入，請確認麥克風權限。' : 'Could not start voice input. Check microphone permissions.');
+    }
   }
-  state.isRecording = false;
-  document.getElementById('mic-btn').classList.remove('recording');
 }
 
-function startQuizRecording(e) {
-  if (e) e.preventDefault();
+function toggleQuizRecording() {
+  if (state.isRecording) {
+    if (state.recognition) { state.recognition.stop(); state.recognition = null; }
+    state.isRecording = false;
+    document.getElementById('quiz-mic-btn').classList.remove('recording');
+    return;
+  }
   stopTTS();
-  const lang = state.lang === 'zh' ? 'zh-TW' : 'en-US';
-  state.recognition = createRecognition(lang, text => {
-    document.getElementById('quiz-text-answer').value = text;
-  });
-  if (state.recognition) {
-    state.recognition.start();
-    state.isRecording = true;
-    document.getElementById('quiz-mic-btn').classList.add('recording');
-  }
-}
-
-function stopQuizRecording(e) {
-  if (e) e.preventDefault();
-  if (state.recognition) {
-    state.recognition.stop();
+  const btn = document.getElementById('quiz-mic-btn');
+  const done = () => {
+    state.isRecording = false;
     state.recognition = null;
+    btn.classList.remove('recording');
+  };
+  state.recognition = createRecognition(
+    state.lang === 'zh' ? 'zh-TW' : 'en-US',
+    text => { document.getElementById('quiz-text-answer').value = text; },
+    done
+  );
+  if (state.recognition) {
+    try {
+      state.recognition.start();
+      state.isRecording = true;
+      btn.classList.add('recording');
+    } catch (err) {
+      state.recognition = null;
+      alert(state.lang === 'zh' ? '無法啟動語音輸入，請確認麥克風權限。' : 'Could not start voice input. Check microphone permissions.');
+    }
   }
-  state.isRecording = false;
-  document.getElementById('quiz-mic-btn').classList.remove('recording');
 }
 
 // ─── QUIZ ─────────────────────────────────────────────────────────────────────

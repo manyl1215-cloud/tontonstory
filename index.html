@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>彤彤的筆畫魔法書 | Tong Tong's Magic Stroke Book</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -125,13 +125,9 @@
       </div>
       <div id="chat-messages" class="chat-messages"></div>
       <div class="chat-input-area">
-        <input type="text" id="chat-text-input" class="chat-text-input" placeholder="打字或按住麥克風說話…">
+        <input type="text" id="chat-text-input" class="chat-text-input" placeholder="打字或點麥克風說話…">
         <button id="send-text-btn" class="icon-btn send-btn" onclick="sendTextMessage()">➤</button>
-        <button id="mic-btn" class="mic-btn"
-          onmousedown="startRecording()" onmouseup="stopRecording()"
-          ontouchstart="startRecording(event)" ontouchend="stopRecording(event)">
-          🎤
-        </button>
+        <button id="mic-btn" class="mic-btn" onclick="toggleRecording()">🎤</button>
       </div>
       <button class="btn btn-secondary btn-sm mt-1" onclick="goQuizScreen()">
         <span id="go-quiz-label">去做測驗 →</span>
@@ -170,11 +166,7 @@
       <div id="quiz-answer-area" class="quiz-answer-area">
         <textarea id="quiz-text-answer" class="quiz-textarea" rows="3" placeholder="在這裡輸入你的答案…"></textarea>
         <div class="quiz-answer-controls">
-          <button id="quiz-mic-btn" class="mic-btn"
-            onmousedown="startQuizRecording()" onmouseup="stopQuizRecording()"
-            ontouchstart="startQuizRecording(event)" ontouchend="stopQuizRecording(event)">
-            🎤
-          </button>
+          <button id="quiz-mic-btn" class="mic-btn" onclick="toggleQuizRecording()">🎤</button>
           <button class="btn btn-primary" onclick="submitQuizAnswer()">
             <span id="submit-label">送出答案</span>
           </button>
